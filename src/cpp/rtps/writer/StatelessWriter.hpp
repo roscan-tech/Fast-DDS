@@ -83,6 +83,8 @@ public:
             CacheChange_t* change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) override;
 
+    bool reset_intraprocess_references() override;
+
     /**
      * Add a matched reader.
      * @param data Pointer to the ReaderProxyData object added.

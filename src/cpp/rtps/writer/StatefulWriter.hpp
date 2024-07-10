@@ -228,6 +228,8 @@ public:
 
     bool all_readers_updated();
 
+    bool reset_intraprocess_references() override;
+
     /**
      * Remove the change with the minimum SequenceNumber
      * @return True if removed.

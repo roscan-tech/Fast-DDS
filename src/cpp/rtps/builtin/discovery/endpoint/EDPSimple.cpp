@@ -653,6 +653,9 @@ bool EDPSimple::removeLocalWriter(
 
     if (writer->first != nullptr)
     {
+        //! reset local pointer in intraprocess readers
+        writer->first->reset_intraprocess_references();
+
         InstanceHandle_t iH;
         iH = W->getGuid();
         CacheChange_t* change = EDPUtils::create_change(*writer, NOT_ALIVE_DISPOSED_UNREGISTERED, iH,
@@ -703,6 +706,9 @@ bool EDPSimple::removeLocalReader(
 
     if (writer->first != nullptr)
     {
+        //! reset local pointer in intraprocess readers
+        writer->first->reset_intraprocess_references();
+
         InstanceHandle_t iH;
         iH = (R->getGuid());
         CacheChange_t* change = EDPUtils::create_change(*writer, NOT_ALIVE_DISPOSED_UNREGISTERED, iH,

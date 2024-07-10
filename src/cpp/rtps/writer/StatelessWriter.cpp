@@ -358,6 +358,20 @@ bool StatelessWriter::change_removed_by_history(
     return ret_value;
 }
 
+bool StatelessWriter::reset_intraprocess_references()
+{
+    if (!matched_local_readers_.empty())
+    {
+        for_matched_readers(matched_local_readers_, [](ReaderLocator& reader)
+                    {
+                        reader.local_reader(nullptr);
+                        return true;
+                    });
+    }
+
+    return true;
+}
+
 bool StatelessWriter::has_been_fully_delivered(
         const SequenceNumber_t& seq_num) const
 {

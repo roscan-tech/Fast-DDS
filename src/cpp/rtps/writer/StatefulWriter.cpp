@@ -402,7 +402,7 @@ bool StatefulWriter::intraprocess_delivery(
         CacheChange_t* change,
         ReaderProxy* reader_proxy)
 {
-    BaseReader* reader = reader_proxy->local_reader(true);
+    BaseReader* reader = reader_proxy->local_reader();
     if (reader)
     {
         if (change->write_params.related_sample_identity() != SampleIdentity::unknown())
@@ -1377,6 +1377,20 @@ bool StatefulWriter::all_readers_updated()
                        return (reader->has_changes());
                    }
                    );
+}
+
+bool StatefulWriter::reset_intraprocess_references()
+{
+    if (!matched_local_readers_.empty())
+    {
+        for_matched_readers(matched_local_readers_, [](ReaderProxy* reader)
+                    {
+                        reader->local_reader(nullptr);
+                        return true;
+                    });
+    }
+
+    return true;
 }
 
 bool StatefulWriter::wait_for_all_acked(

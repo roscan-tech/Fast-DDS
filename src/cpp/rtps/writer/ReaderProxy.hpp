@@ -296,6 +296,15 @@ public:
     }
 
     /**
+     * Get the local reader on the same process (if any).
+     * @return The local reader on the same process.
+     */
+    inline void local_reader(BaseReader* reader)
+    {
+        locator_info_.local_reader(reader);
+    }
+
+    /**
      * Called when an ACKNACK is received to set a new value for the minimum count accepted for following received
      * ACKNACKs.
      *
