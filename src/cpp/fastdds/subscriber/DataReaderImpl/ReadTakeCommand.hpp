@@ -113,6 +113,18 @@ struct ReadTakeCommand
         while (!finished_ && it != instance_->second->cache_changes.end())
         {
             CacheChange_t* change = *it;
+
+            // Check if we need to remove the change due to ownership
+            if ((instance_->second->current_owner.second < std::numeric_limits<uint32_t>::max()) &&
+                    (instance_->second->current_owner.first != change->writerGUID))
+            {
+                // Remove from history
+                history_.remove_change_sub(change, it);
+
+                // Current iterator will point to change next to the one removed. Avoid incrementing.
+                continue;
+            }
+
             SampleStateKind check;
             check = change->isRead ? SampleStateKind::READ_SAMPLE_STATE : SampleStateKind::NOT_READ_SAMPLE_STATE;
             if ((check & states_.sample_states) != 0)
