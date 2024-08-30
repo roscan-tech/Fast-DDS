@@ -2165,6 +2165,65 @@ TEST_P(OwnershipQos, exclusive_kind_keyed_besteffort_disposing_instance)
     exclusive_kind_keyed_disposing_instance(false);
 }
 
+/*!
+ * This is a regression test for redmine issue 20866.
+ *
+ * This test checks that a reader with a KEEP_ALL history and an exclusive ownership policy only returns the data
+ * from the writer with the highest strength.
+ */
+TEST_P(OwnershipQos, exclusive_kind_keep_all_reliable)
+{
+    PubSubReader<KeyedHelloWorldPubSubType> reader(TEST_TOPIC_NAME);
+    PubSubWriter<KeyedHelloWorldPubSubType> low_strength_writer(TEST_TOPIC_NAME);
+    PubSubWriter<KeyedHelloWorldPubSubType> high_strength_writer(TEST_TOPIC_NAME);
+
+    // Initialize entities.
+    reader.ownership_exclusive()
+            .reliability(eprosima::fastdds::dds::RELIABLE_RELIABILITY_QOS)
+            .history_kind(eprosima::fastdds::dds::KEEP_ALL_HISTORY_QOS)
+            .init();
+    ASSERT_TRUE(reader.isInitialized());
+
+    low_strength_writer.ownership_strength(3)
+            .history_kind(eprosima::fastdds::dds::KEEP_ALL_HISTORY_QOS)
+            .reliability(eprosima::fastdds::dds::RELIABLE_RELIABILITY_QOS)
+            .init();
+    ASSERT_TRUE(low_strength_writer.isInitialized());
+
+    high_strength_writer.ownership_strength(4)
+            .history_kind(eprosima::fastdds::dds::KEEP_ALL_HISTORY_QOS)
+            .reliability(eprosima::fastdds::dds::RELIABLE_RELIABILITY_QOS)
+            .init();
+    ASSERT_TRUE(high_strength_writer.isInitialized());
+
+    // Wait for discovery.
+    low_strength_writer.wait_discovery();
+    high_strength_writer.wait_discovery();
+    reader.wait_discovery(std::chrono::seconds::zero(), 2);
+
+    // Prepare data.
+    std::list<KeyedHelloWorld> generated_data = default_keyedhelloworld_data_generator(20);
+    auto middle = std::next(generated_data.begin(), 10);
+    std::list<KeyedHelloWorld> low_strength_data(generated_data.begin(), middle);
+    std::list<KeyedHelloWorld> high_strength_data(middle, generated_data.end());
+    auto expected_data = high_strength_data;
+
+    // Send low strength data, and ensure it has been receieved.
+    low_strength_writer.send(low_strength_data);
+    EXPECT_TRUE(low_strength_data.empty());
+    EXPECT_TRUE(low_strength_writer.waitForAllAcked(std::chrono::seconds(2)));
+
+    // Send high strength data, and ensure it has been received.
+    high_strength_writer.send(high_strength_data);
+    EXPECT_TRUE(high_strength_data.empty());
+    EXPECT_TRUE(high_strength_writer.waitForAllAcked(std::chrono::seconds(2)));
+
+    // Make the reader process the data, expecting only the high strength data.
+    // The issue was reproduced by the reader complaining about reception of unexpected data.
+    reader.startReception(expected_data);
+    reader.block_for_all();
+}
+
 #ifdef INSTANTIATE_TEST_SUITE_P
 #define GTEST_INSTANTIATE_TEST_MACRO(x, y, z, w) INSTANTIATE_TEST_SUITE_P(x, y, z, w)
 #else
