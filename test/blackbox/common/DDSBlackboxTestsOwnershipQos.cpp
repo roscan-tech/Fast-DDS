@@ -2208,7 +2208,7 @@ TEST_P(OwnershipQos, exclusive_kind_keep_all_reliable)
     std::list<KeyedHelloWorld> high_strength_data(middle, generated_data.end());
     auto expected_data = high_strength_data;
 
-    // Send low strength data, and ensure it has been receieved.
+    // Send low strength data, and ensure it has been received.
     low_strength_writer.send(low_strength_data);
     EXPECT_TRUE(low_strength_data.empty());
     EXPECT_TRUE(low_strength_writer.waitForAllAcked(std::chrono::seconds(2)));
