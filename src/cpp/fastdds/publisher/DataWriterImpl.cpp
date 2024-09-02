@@ -33,6 +33,7 @@
 #include <fastdds/domain/DomainParticipantImpl.hpp>
 #include <fastdds/publisher/filtering/DataWriterFilteredChangePool.hpp>
 #include <fastdds/publisher/PublisherImpl.hpp>
+<<<<<<< HEAD
 #include <fastdds/rtps/builtin/liveliness/WLP.h>
 #include <fastdds/rtps/participant/RTPSParticipant.h>
 #include <fastdds/rtps/resources/ResourceEvent.h>
@@ -43,6 +44,13 @@
 #include <fastrtps/attributes/TopicAttributes.h>
 #include <fastrtps/config.h>
 #include <fastrtps/utils/TimeConversion.h>
+=======
+#include <fastdds/rtps/builtin/data/TopicDescription.hpp>
+#include <fastdds/rtps/common/Time_t.hpp>
+#include <fastdds/rtps/participant/RTPSParticipant.hpp>
+#include <fastdds/rtps/RTPSDomain.hpp>
+#include <fastdds/rtps/writer/RTPSWriter.hpp>
+>>>>>>> ccc690c97 (Improve resilience against clock adjustments (#5018))
 
 #include <rtps/DataSharing/DataSharingPayloadPool.hpp>
 #include <rtps/history/CacheChangePool.h>
@@ -1027,7 +1035,7 @@ ReturnCode_t DataWriterImpl::perform_create_new_change(
         {
             if (!history_.set_next_deadline(
                         handle,
-                        steady_clock::now() + duration_cast<system_clock::duration>(deadline_duration_us_)))
+                        steady_clock::now() + duration_cast<steady_clock::duration>(deadline_duration_us_)))
             {
                 EPROSIMA_LOG_ERROR(DATA_WRITER, "Could not set the next deadline in the history");
             }
@@ -1499,7 +1507,7 @@ bool DataWriterImpl::deadline_missed()
 
     if (!history_.set_next_deadline(
                 timer_owner_,
-                steady_clock::now() + duration_cast<system_clock::duration>(deadline_duration_us_)))
+                steady_clock::now() + duration_cast<steady_clock::duration>(deadline_duration_us_)))
     {
         EPROSIMA_LOG_ERROR(DATA_WRITER, "Could not set the next deadline in the history");
         return false;
@@ -1549,21 +1557,24 @@ bool DataWriterImpl::lifespan_expired()
 {
     std::unique_lock<RecursiveTimedMutex> lock(writer_->getMutex());
 
+    fastdds::rtps::Time_t current_ts;
+    fastdds::rtps::Time_t::now(current_ts);
+
     CacheChange_t* earliest_change;
     while (history_.get_earliest_change(&earliest_change))
     {
-        auto source_timestamp = system_clock::time_point() + nanoseconds(earliest_change->sourceTimestamp.to_ns());
-        auto now = system_clock::now();
+        fastdds::rtps::Time_t expiration_ts = earliest_change->sourceTimestamp + qos_.lifespan().duration;
 
         // Check that the earliest change has expired (the change which started the timer could have been removed from the history)
-        if (now - source_timestamp < lifespan_duration_us_)
+        if (current_ts < expiration_ts)
         {
-            auto interval = source_timestamp - now + lifespan_duration_us_;
-            lifespan_timer_->update_interval_millisec(static_cast<double>(duration_cast<milliseconds>(interval).count()));
+            fastdds::rtps::Time_t interval = expiration_ts - current_ts;
+            lifespan_timer_->update_interval_millisec(interval.to_ns() * 1e-6);
             return true;
         }
 
         // The earliest change has expired
+<<<<<<< HEAD
         history_.remove_change_pub(earliest_change);
 
         // Set the timer for the next change if there is one
@@ -1582,6 +1593,9 @@ bool DataWriterImpl::lifespan_expired()
             lifespan_timer_->update_interval_millisec(static_cast<double>(duration_cast<milliseconds>(interval).count()));
             return true;
         }
+=======
+        history_->remove_change_pub(earliest_change);
+>>>>>>> ccc690c97 (Improve resilience against clock adjustments (#5018))
     }
 
     return false;
